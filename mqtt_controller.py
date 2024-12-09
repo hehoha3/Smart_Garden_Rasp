@@ -6,12 +6,15 @@ from firebase_admin import credentials, db, initialize_app
 
 class MQTTController:
     def __init__(self, host, port, keep_alive, firebase_key_path, db_url):
+        #! ---------------------------- CONFIGs ----------------------------
         self.client = mqtt.Client()
         self.client.connect(host, port, keep_alive)
 
         # Authenticate to Firebase
         cred = credentials.Certificate(firebase_key_path)
         initialize_app(cred, {"databaseURL": db_url})
+
+        #! ---------------------------- VARIABLEs ----------------------------
 
         # Save last executed for publish MQTT 1 time
         self.last_executed = {
@@ -30,7 +33,9 @@ class MQTTController:
             "DHT11/Humidity": None,
         }
 
-    #! [SAVE] MQTT msg
+        #! ---------------------------- FUNCs ----------------------------
+
+    # * [SAVE] MQTT msg
     def on_message(self, client, userdata, msg):
         topic = msg.topic
         payload = msg.payload.decode("utf-8")
@@ -40,18 +45,18 @@ class MQTTController:
             self.sensor_values[topic] = float(payload)
             print(f"[SAVE] Topic {topic}: {self.sensor_values[topic]}")
 
-    #! Subscibe TOPIC & [SAVE] MQTT msg
+    # * Subscibe TOPIC & [SAVE] MQTT msg
     def subscribe_to_topics(self, topics):
         for topic in topics:
             self.client.subscribe(topic)
         # [SAVE] MQTT msg
         self.client.on_message = self.on_message
 
-    #! Publish MQTT msg to TOPIC
+    # * Publish MQTT msg to TOPIC
     def publish_to_topics(self, topic, msg):
         self.client.publish(topic, msg)
 
-    #! Logic Control PUMPs
+    # * Logic Control PUMPs
     def control_pumps(self, topic_pump_left, topic_pump_right):
         moisture_left = self.sensor_values["Soil/Moisture_LEFT"]
         moisture_right = self.sensor_values["Soil/Moisture_RIGHT"]
@@ -92,7 +97,7 @@ class MQTTController:
             self.client.publish(topic_pump_right, "OFF")
             self.last_executed["pump_RIGHT"] = "OFF"
 
-    #! Logic fot TIMERs
+    # * Logic fot TIMERs
     def check_timer_and_publish(
         self,
         topic_pump_left,
